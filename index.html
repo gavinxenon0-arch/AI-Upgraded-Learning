@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KB Chat Tester (API Gateway → Lambda)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    .card { max-width: 900px; margin: 0 auto; padding: 18px; border: 1px solid #ddd; border-radius: 12px; }
+    h1 { margin: 0 0 12px; font-size: 22px; }
+    label { display:block; font-weight: 600; margin: 12px 0 6px; }
+    input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 10px; font-size: 14px; }
+    textarea { min-height: 120px; }
+    .row { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    button { padding: 10px 14px; border: 1px solid #999; background: #fff; border-radius: 10px; cursor: pointer; }
+    button.primary { border-color: #2b6; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; }
+    .ok { color: #0a7; font-weight: 700; }
+    .bad { color: #c00; font-weight: 700; }
+    .small { font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>KB Chat Tester (API Gateway → Lambda)</h1>
+    <div class="small">
+      Endpoint should look like: <span class="mono">https://xxxx.execute-api.us-east-1.amazonaws.com/prod/chat</span>
+    </div>
+
+    <label for="endpoint">API Endpoint (POST)</label>
+    <input id="endpoint" placeholder="https://.../prod/chat" />
+
+    <div class="row">
+      <button id="saveBtn">Save endpoint</button>
+      <button id="pingBtn">Test ping</button>
+      <button id="clearBtn">Clear</button>
+    </div>
+
+    <label for="question">Question</label>
+    <textarea id="question" placeholder="Ask something..."></textarea>
+
+    <div class="row">
+      <button id="sendBtn" class="primary">Send</button>
+    </div>
+
+    <label>Result</label>
+    <div id="statusLine" class="small"></div>
+    <div id="answer" class="mono" style="margin-top:8px; padding:12px; border:1px solid #eee; border-radius:10px; min-height:60px;">
+      Ready.
+    </div>
+
+    <label>Debug</label>
+    <div id="debug" class="mono" style="margin-top:8px; padding:12px; border:1px solid #eee; border-radius:10px; min-height:60px;"></div>
+
+    <div class="small" style="margin-top: 14px;">
+      If you see a CORS error in Debug, you need to enable CORS on API Gateway or add the right headers in Lambda.
+    </div>
+  </div>
+
+  <script>
+    const endpointEl = document.getElementById("endpoint");
+    const questionEl = document.getElementById("question");
+    const sendBtn = document.getElementById("sendBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const pingBtn = document.getElementById("pingBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const answerEl = document.getElementById("answer");
+    const debugEl = document.getElementById("debug");
+    const statusLineEl = document.getElementById("statusLine");
+
+    const LS_KEY = "kb_chat_endpoint";
+
+    function setUIBusy(busy) {
+      sendBtn.disabled = busy;
+      pingBtn.disabled = busy;
+      saveBtn.disabled = busy;
+      clearBtn.disabled = busy;
+    }
+
+    function setAnswer(text, isError=false) {
+      answerEl.textContent = text;
+      answerEl.className = "mono " + (isError ? "bad" : "");
+    }
+
+    function setDebug(obj) {
+      debugEl.textContent = obj ? JSON.stringify(obj, null, 2) : "";
+    }
+
+    function setStatus(ok, status, ms) {
+      const cls = ok ? "ok" : "bad";
+      statusLineEl.innerHTML = `<span class="${cls}">${ok ? "OK" : "ERROR"}</span> — HTTP ${status} — ${ms}ms`;
+    }
+
+    async function postJson(url, bodyObj) {
+      const t0 = performance.now();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bodyObj),
+          signal: controller.signal
+        });
+
+        const raw = await res.text();
+        let json = null;
+        try { json = JSON.parse(raw); } catch (_) {}
+
+        const ms = Math.round(performance.now() - t0);
+        clearTimeout(timeout);
+
+        return { ok: res.ok, status: res.status, raw, json, ms };
+      } catch (err) {
+        clearTimeout(timeout);
+        const ms = Math.round(performance.now() - t0);
+        return { ok: false, status: 0, raw: String(err), json: null, ms, error: err?.name || "FetchError" };
+      }
+    }
+
+    function loadSaved() {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) endpointEl.value = saved;
+    }
+
+    saveBtn.onclick = () => {
+      const ep = endpointEl.value.trim();
+      localStorage.setItem(LS_KEY, ep);
+      setDebug({ savedEndpoint: ep });
+      setAnswer("Saved endpoint.");
+    };
+
+    clearBtn.onclick = () => {
+      questionEl.value = "";
+      setAnswer("Cleared.");
+      setDebug("");
+      statusLineEl.textContent = "";
+    };
+
+    pingBtn.onclick = async () => {
+      const url = endpointEl.value.trim();
+      if (!url) return setAnswer("Set your API endpoint first.", true);
+
+      setUIBusy(true);
+      setAnswer("Testing...", false);
+      setDebug("");
+
+      // Your Lambda should handle this; if not, you'll at least see the error clearly.
+      const result = await postJson(url, { question: "ping" });
+
+      setStatus(result.ok, result.status, result.ms);
+      setDebug(result);
+
+      if (!result.ok) {
+        setAnswer(`Test failed.\n\n${result.raw}`, true);
+      } else {
+        const ans = result.json?.answer ?? result.json?.message ?? result.raw;
+        setAnswer(`Test OK ✅\n\n${ans}`);
+      }
+      setUIBusy(false);
+    };
+
+    sendBtn.onclick = async () => {
+      const url = endpointEl.value.trim();
+      const q = questionEl.value.trim();
+
+      if (!url) return setAnswer("Set your API endpoint first.", true);
+      if (!q) return setAnswer("Type a question first.", true);
+
+      setUIBusy(true);
+      setAnswer("Thinking...", false);
+      setDebug("");
+
+      const result = await postJson(url, { question: q });
+
+      setStatus(result.ok, result.status, result.ms);
+      setDebug(result);
+
+      if (!result.ok) {
+        // Common: CORS shows as TypeError: Failed to fetch
+        setAnswer(`Request failed.\n\n${result.raw}`, true);
+      } else {
+        const ans = result.json?.answer ?? result.json?.message ?? result.raw;
+        setAnswer(ans, false);
+      }
+      setUIBusy(false);
+    };
+
+    loadSaved();
+  </script>
+</body>
+</html>
