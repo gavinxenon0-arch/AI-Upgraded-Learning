@@ -335,6 +335,14 @@ Go to your domain (CloudFront site), paste the **Invoke URL**, and start asking 
 
 The AI knowledge base is built from **AWS Security Specialty** material stored in `RAG_Documents/`.
 
+## 🧨 Tear Down
+
+To remove all deployed infrastructure and stop AWS charges:
+
+```bash
+terraform destroy
+
+
 ## 🧑‍💻 Author
 
 Built as a **production-inspired cloud architecture project** using Terraform and AWS.
