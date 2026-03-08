@@ -339,8 +339,8 @@ The AI knowledge base is built from **AWS Security Specialty** material stored i
 
 To remove all deployed infrastructure and stop AWS charges:
 
-```bash
-terraform destroy
+run terraform destroy
+
 
 
 ## 🧑‍💻 Author
