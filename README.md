@@ -95,7 +95,7 @@ Hosting Options
 S3 + Cloudfront
 <img width="1536" height="1024" alt="ChatGPT Image Mar 5, 2026, 02_46_18 AM" src="https://github.com/user-attachments/assets/f3e9f930-64bd-44f0-b122-f15853d5d8b3" />
 
-    &
+
 Ec2 Website
 <img width="1536" height="1024" alt="ec2 sssafaf" src="https://github.com/user-attachments/assets/3dbe8cc0-7822-445b-9f5a-0cbcc5733919" />
 
