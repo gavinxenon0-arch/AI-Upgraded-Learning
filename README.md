@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚔️ Bedrock RAG Chat System — Terraform + CloudFront + Edge Content Delivery
+# ⚔️ Hallucination-Resistant RAG System on AWS
 
 **Production-minded RAG pipeline:** S3 docs → S3 Vectors → Bedrock Knowledge Base → Lambda Chat API → (Optional) Website Hosting
 
@@ -48,13 +48,21 @@ It automatically provisions:
 
 Component	Description
 📄 S3 Document Storage	Upload knowledge base documents
+
 🧠 Bedrock Knowledge Base	AI retrieval system
+
 🧬 S3 Vector Database	Vector embeddings storage
+
 ⚡ Lambda Chat Engine	Handles prompts + model responses
+
 🌐 API Gateway	Public /chat endpoint
+
 ☁️ CloudFront CDN	Optional global frontend hosting
+
 🔐 IAM Roles	Secure model and storage access
+
 🌎 VPC + Subnets	Isolated infrastructure
+
 ---
 
 # 🧠 RAG Architecture
