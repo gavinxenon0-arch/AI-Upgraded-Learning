@@ -47,6 +47,7 @@ This project deploys a complete Retrieval Augmented Generation (RAG) system usin
 It automatically provisions:
 
 Component	Description
+
 📄 S3 Document Storage	Upload knowledge base documents
 
 🧠 Bedrock Knowledge Base	AI retrieval system
